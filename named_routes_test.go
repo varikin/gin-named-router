@@ -1,11 +1,33 @@
 package namedrouter_test
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/varikin/gin-named-router"
 )
+
+func Example() {
+	// Setup the Gin router with named routes
+	engine := gin.Default()
+	router := namedrouter.New(engine)
+	router.Get("root", "/", func(c *gin.Context) {
+		c.String(http.StatusOK, "Hello")
+	})
+	router.Get("user", "/user/:id", func(c *gin.Context) {
+		c.String(http.StatusOK, "Hello")
+	})
+
+	// Start the router (but not in a simple example because it blocks)
+	// router.Run(":8080")
+
+	// Elsewhere in a handler
+	rootPath, _ := router.Reverse("root").Path()
+	println(rootPath)
+	path, _ := router.Reverse("user").With("id", "3").Path()
+	println(path)
+}
 
 func noop(c *gin.Context) {}
 
