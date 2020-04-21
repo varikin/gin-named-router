@@ -1,6 +1,10 @@
-// Package namedrouter adds the ability to name routes in Gin without hiding Gin from the user.
+// Package namedrouter adds the ability to name routes in Gin.
 //
-// See https://pkg.go.dev/github.com/gin-gonic/gin for more information information on Gin.
+// A namedrouter wraps a gin.Engine instance while still exposing the wrapped gin.Engine instance.
+//
+// See also
+//
+// https://pkg.go.dev/github.com/gin-gonic/gin
 package namedrouter
 
 import (
@@ -10,43 +14,41 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// NamedRouter wraps a `*gin.Engine` instance while also maintaining a mapping of names to routes.
-// Use `namedrouter.New(engine *gin.Engine)` to create a new instance.
+// NamedRouter wraps a gin.Engine instance while also maintaining a mapping of names to routes.
+// Use namedrouter.New(engine *gin.Engine) to create a new instance.
 type NamedRouter struct {
 	*gin.Engine
 	Names map[string]string
 }
 
 // NamedRoute is an instance of named route with parameters for a specific route.
-// See the examples for further information.
 type NamedRoute struct {
-	Name string
-	Route string
+	Name       string
+	Route      string
 	Parameters map[string]string
 }
 
-// New returns a new instance of a `*NamedRouter` with the given `*gin.Engine`.
-// NamedRouter does not have any requirements on how the `*gin.Engine` is constructed, instead
+// New returns a new instance which wraps the given gin.Engine.
+// NamedRouter does not have any requirements on how the gin.Engine is constructed, instead
 // preferring to have instance passed in.
 func New(engine *gin.Engine) *NamedRouter {
 	return &NamedRouter{
 		Engine: engine,
-		Names: make(map[string]string),
+		Names:  make(map[string]string),
 	}
 }
 
-// Reverse returns a `NamedRoute` for the given `name`.
-// See examples for more information.
+// Reverse returns a NamedRoute for the given name.
 func (nr *NamedRouter) Reverse(name string) NamedRoute {
 	return NamedRoute{
-		Name: name,
-		Route: nr.Names[name],
+		Name:       name,
+		Route:      nr.Names[name],
 		Parameters: make(map[string]string),
 	}
 
 }
 
-// With adds a parameter by name to the `NamedRoute`.
+// With adds a parameter by name to the NamedRoute.
 // Returns the same named route so it can be used as a fluent-api.
 func (nr NamedRoute) With(key, value string) NamedRoute {
 	nr.Parameters[key] = value
@@ -61,10 +63,7 @@ func (nr NamedRoute) With(key, value string) NamedRoute {
 // For example, the route to http://example.org/users will return /users.
 func (nr NamedRoute) Path() (string, error) {
 	if nr.Route == "" {
-		return "", fmt.Errorf("undefined route for %s", nr.Name)
-	}
-	if len(nr.Parameters) == 0 {
-		return nr.Route, nil
+		return "", NoRouteDefinedError(nr.Name)
 	}
 
 	var url strings.Builder
@@ -79,7 +78,7 @@ func (nr NamedRoute) Path() (string, error) {
 			param := part[1:]
 			value, exists := nr.Parameters[param]
 			if !exists {
-				return "", fmt.Errorf("parameter in named route not set: %s", param)
+				return "", RouteParameterNotSet(param)
 			}
 			url.WriteString(value)
 
@@ -94,7 +93,9 @@ func (nr NamedRoute) Path() (string, error) {
 		}
 	}
 	if len(nr.Parameters) > 0 {
-		return "", fmt.Errorf("not all parameters used in the route: %v", nr.Parameters)
+		for key := range nr.Parameters {
+			return "", UnknownRouteParameter(key)
+		}
 	}
 
 	return url.String(), nil
@@ -140,4 +141,22 @@ func (nr *NamedRouter) Options(name string, relativePath string, handlers ...gin
 func (nr *NamedRouter) Head(name string, relativePath string, handlers ...gin.HandlerFunc) {
 	nr.Names[name] = relativePath
 	nr.HEAD(relativePath, handlers...)
+}
+
+type NoRouteDefinedError string
+
+func (s NoRouteDefinedError) Error() string {
+	return fmt.Sprintf("no route defined for %s", string(s))
+}
+
+type UnknownRouteParameter string
+
+func (s UnknownRouteParameter) Error() string {
+	return fmt.Sprintf("unknown route parameter: %s", string(s))
+}
+
+type RouteParameterNotSet string
+
+func (s RouteParameterNotSet) Error() string {
+	return fmt.Sprintf("route parameter not set: %s", string(s))
 }
