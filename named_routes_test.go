@@ -25,8 +25,11 @@ func Example() {
 	// Elsewhere in a handler
 	rootPath, _ := router.Reverse("root").Path()
 	println(rootPath)
+	// Output: /
+
 	path, _ := router.Reverse("user").With("id", "3").Path()
 	println(path)
+	// Output: /user/3
 }
 
 func noop(c *gin.Context) {}
