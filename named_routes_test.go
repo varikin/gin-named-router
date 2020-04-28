@@ -1,6 +1,7 @@
 package namedrouter_test
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -9,27 +10,51 @@ import (
 )
 
 func Example() {
+
+	helloFunc := func(c *gin.Context) {
+		c.String(http.StatusOK, "Hello")
+	}
 	// Setup the Gin router with named routes
 	engine := gin.Default()
 	router := namedrouter.New(engine)
-	router.Get("root", "/", func(c *gin.Context) {
-		c.String(http.StatusOK, "Hello")
-	})
-	router.Get("user", "/user/:id", func(c *gin.Context) {
-		c.String(http.StatusOK, "Hello")
-	})
+	router.Get("root", "/", helloFunc)
+	router.Get("user", "/user/:id", helloFunc)
+
+	// Routes groups be named as well.
+	// The group isn't named, but a NamedGroup is needed to register the named routs
+	// within that group.
+	api := router.NamedGroup("/api")
+	api.Get("api-info", "/info", helloFunc)
+
+	// Nested named groups are also supported
+	v1 := api.NamedGroup("v1")
+	v1.Post("v1-submit", "/submit", helloFunc)
+
 
 	// Start the router (but not in a simple example because it blocks)
 	// router.Run(":8080")
 
 	// Elsewhere in a handler
 	rootPath, _ := router.Reverse("root").Path()
-	println(rootPath)
-	// Output: /
+	fmt.Println(rootPath)
 
 	path, _ := router.Reverse("user").With("id", "3").Path()
-	println(path)
-	// Output: /user/3
+	fmt.Println(path)
+
+	// Only the named router is needed to reverse any routes within groups
+	path, _ = router.Reverse("api-info").Path()
+	fmt.Println(path)
+
+	path, _ = router.Reverse("v1-submit").Path()
+	fmt.Println(path)
+
+
+
+	// Output:
+	// /
+	// /user/3
+	// /api/info
+	// /api/v1/submit
 }
 
 func noop(c *gin.Context) {}
