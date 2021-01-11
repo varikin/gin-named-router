@@ -8,10 +8,8 @@ If not, please let me know.
 
 ## Should I use this?
 
-NO!
+Probably not. It is simple, but thrown together over a couple weekends. But please use it as a reference.
 
-This is incomplete.
-It does not yet support groups in Gin which is the biggest missing feature gap.
 
 ## Example
 
